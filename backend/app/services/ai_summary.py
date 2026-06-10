@@ -12,12 +12,11 @@ from app.utils.file_utils import read_file
 from app.utils.hashing import hash_text
 
 try:
-    import google.generativeai as genai  # type: ignore
+    from google import genai  # type: ignore
 except Exception:  # pragma: no cover
     genai = None
 
-
-DEFAULT_MODEL_NAME = "gemini-1.5-flash"
+DEFAULT_MODEL_NAME = "gemini-3.5-flash"
 
 
 @dataclass(frozen=True)
@@ -153,9 +152,7 @@ def _local_fallback_summary(code: str, language: str, file_path: str | None = No
             pieces.append(f"{ctx.function_count} function{'s' if ctx.function_count != 1 else ''}")
         if ctx.class_count:
             pieces.append(f"{ctx.class_count} class{'es' if ctx.class_count != 1 else ''}")
-        summary_parts.append(
-            f"It defines {', '.join(pieces)}."
-        )
+        summary_parts.append(f"It defines {', '.join(pieces)}.")
 
     if imports:
         preview_imports = ", ".join(imports[:5])
@@ -164,9 +161,7 @@ def _local_fallback_summary(code: str, language: str, file_path: str | None = No
     if first_non_empty:
         summary_parts.append(f"The file starts with: `{first_non_empty[:120]}`")
 
-    summary_parts.append(
-        "Overall, this file appears to be part of the repository's implementation layer."
-    )
+    summary_parts.append("Overall, this file appears to be part of the repository's implementation layer.")
 
     return " ".join(summary_parts)
 
@@ -183,18 +178,29 @@ def summarize_with_gemini(code: str, language: str, file_path: str | None = None
     from app.core.config import get_settings
 
     settings = get_settings()
+    print("GEMINI KEY EXISTS =", bool(settings.gemini_api_key))
+
     if not settings.gemini_api_key:
         return _local_fallback_summary(code, language, file_path)
 
     try:
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(DEFAULT_MODEL_NAME)
-        response = model.generate_content(prompt)
+        print("USING GEMINI...")
+
+        client = genai.Client(api_key=settings.gemini_api_key)
+        response = client.models.generate_content(
+            model=DEFAULT_MODEL_NAME,
+            contents=prompt,
+        )
+
         text = getattr(response, "text", None)
         if text and text.strip():
+            print("GEMINI SUCCESS")
             return text.strip()
-    except Exception:
-        pass
+
+        print("GEMINI EMPTY RESPONSE")
+
+    except Exception as e:
+        print("GEMINI ERROR:", repr(e))
 
     return _local_fallback_summary(code, language, file_path)
 

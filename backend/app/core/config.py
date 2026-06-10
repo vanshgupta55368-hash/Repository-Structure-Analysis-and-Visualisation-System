@@ -5,7 +5,12 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from app.core.constants import IGNORED_DIRECTORIES, MAX_FILE_SIZE_BYTES
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(BASE_DIR / ".env")
 
 
 @dataclass(frozen=True)
@@ -34,5 +39,9 @@ class Settings:
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     settings = Settings()
+
+    print("CACHE DIR =", settings.cache_dir)
+
     settings.cache_dir.mkdir(parents=True, exist_ok=True)
+
     return settings

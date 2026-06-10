@@ -43,3 +43,51 @@ class AnalysisResponse(BaseModel):
     graph_insights: GraphInsightsSchema
     repo_hash: str
     dependency_map: dict[str, list[str]]
+
+
+class FileSummaryRequest(BaseModel):
+    repo_path: str = Field(..., description="Path to the repository root")
+    file_path: str = Field(..., description="Repository-relative file path or absolute file path")
+
+
+class FileSummaryResponse(BaseModel):
+    repo_path: str
+    file_path: str
+    language: str
+    size: int
+    file_hash: str | None = None
+    cached: bool = False
+    summary: str
+
+
+class RepositorySummaryRequest(BaseModel):
+    repo_path: str = Field(..., description="Path to the repository root")
+
+
+class RepositorySummaryResponse(BaseModel):
+    repo_path: str
+    total_files: int
+    language_breakdown: dict[str, int]
+    cached: bool = False
+    summary: str
+
+
+class ArchitectureSummaryRequest(BaseModel):
+    repo_path: str = Field(..., description="Path to the repository root")
+
+
+class ArchitectureSummaryResponse(BaseModel):
+    repo_path: str
+    repo_hash: str
+    cached: bool = False
+
+    total_files: int
+    language_breakdown: dict[str, int]
+
+    stats: AnalysisStats
+    graph_insights: GraphInsightsSchema
+
+    overview: str
+    main_modules: list[str] = Field(default_factory=list)
+    hotspots: list[str] = Field(default_factory=list)
+    refactoring_suggestions: list[str] = Field(default_factory=list)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -18,6 +19,14 @@ class CacheManager:
         self.analysis_dir.mkdir(parents=True, exist_ok=True)
         self.summary_dir.mkdir(parents=True, exist_ok=True)
 
+    def _safe_filename(self, key: str) -> str:
+        """
+        Convert any cache key into a Windows-safe filename.
+        """
+        cleaned = re.sub(r'[<>:"/\\|?*]+', "_", key.strip())
+        cleaned = cleaned.strip(" .")
+        return cleaned or "cache"
+
     def _read_json(self, path: Path) -> dict[str, Any] | None:
         if not path.exists():
             return None
@@ -34,32 +43,38 @@ class CacheManager:
 
     def get_analysis(self, repo_hash: str) -> dict[str, Any] | None:
         with _LOCK:
-            return self._read_json(self.analysis_dir / f"{repo_hash}.json")
+            filename = self._safe_filename(repo_hash)
+            return self._read_json(self.analysis_dir / f"{filename}.json")
 
     def set_analysis(self, repo_hash: str, data: Any) -> None:
         with _LOCK:
-            self._write_json(self.analysis_dir / f"{repo_hash}.json", data)
+            filename = self._safe_filename(repo_hash)
+            self._write_json(self.analysis_dir / f"{filename}.json", data)
 
     def get_summary(self, file_hash: str) -> str | None:
         with _LOCK:
-            data = self._read_json(self.summary_dir / f"{file_hash}.json")
+            filename = self._safe_filename(file_hash)
+            data = self._read_json(self.summary_dir / f"{filename}.json")
             if not data:
                 return None
             return data.get("summary")
 
     def set_summary(self, file_hash: str, summary: str) -> None:
         with _LOCK:
-            self._write_json(self.summary_dir / f"{file_hash}.json", {"summary": summary})
+            filename = self._safe_filename(file_hash)
+            self._write_json(self.summary_dir / f"{filename}.json", {"summary": summary})
 
     def invalidate_analysis(self, repo_hash: str) -> None:
         with _LOCK:
-            p = self.analysis_dir / f"{repo_hash}.json"
+            filename = self._safe_filename(repo_hash)
+            p = self.analysis_dir / f"{filename}.json"
             if p.exists():
                 p.unlink()
 
     def invalidate_summary(self, file_hash: str) -> None:
         with _LOCK:
-            p = self.summary_dir / f"{file_hash}.json"
+            filename = self._safe_filename(file_hash)
+            p = self.summary_dir / f"{filename}.json"
             if p.exists():
                 p.unlink()
 
