@@ -309,3 +309,30 @@ button:disabled {
     justify-self: start;
   }
 }
+.graph-card {
+  margin-top: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.22);
+  overflow: hidden;
+}
+
+.graph-header {
+  padding: 18px 20px 0;
+}
+
+.graph-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.graph-header p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+}
+
+.graph-container {
+  height: 900px;
+  width: 100%;
+}
