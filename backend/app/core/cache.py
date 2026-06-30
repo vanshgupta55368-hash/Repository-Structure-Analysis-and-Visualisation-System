@@ -12,71 +12,90 @@ _LOCK = Lock()
 
 
 class CacheManager:
-    def __init__(self, base_dir: Path):
-        self.base_dir = base_dir
-        self.analysis_dir = self.base_dir / "analysis"
-        self.summary_dir = self.base_dir / "summaries"
+    def __init__(self, cache_dir: Path):
+        self.analysis_dir = cache_dir / "analysis"
+        self.summary_dir = cache_dir / "summaries"
+
         self.analysis_dir.mkdir(parents=True, exist_ok=True)
         self.summary_dir.mkdir(parents=True, exist_ok=True)
 
-    def _safe_filename(self, key: str) -> str:
-        """
-        Convert any cache key into a Windows-safe filename.
-        """
-        cleaned = re.sub(r'[<>:"/\\|?*]+', "_", key.strip())
-        cleaned = cleaned.strip(" .")
-        return cleaned or "cache"
+    def _cache_name(self, key: str) -> str:
+        """Return a filesystem-safe cache filename."""
+        name = re.sub(r'[<>:"/\\|?*]+', "_", key.strip())
+        return name.strip(" .") or "cache"
 
-    def _read_json(self, path: Path) -> dict[str, Any] | None:
-        if not path.exists():
+    def _analysis_file(self, repo_hash: str) -> Path:
+        return self.analysis_dir / f"{self._cache_name(repo_hash)}.json"
+
+    def _summary_file(self, file_hash: str) -> Path:
+        return self.summary_dir / f"{self._cache_name(file_hash)}.json"
+
+    def _read_json(self, file_path: Path) -> dict[str, Any] | None:
+        if not file_path.exists():
             return None
+
         try:
-            with path.open("r", encoding="utf-8") as f:
+            with file_path.open("r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return None
 
-    def _write_json(self, path: Path, data: Any) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+    def _write_json(self, file_path: Path, data: Any) -> None:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with file_path.open("w", encoding="utf-8") as f:
+            json.dump(
+                data,
+                f,
+                indent=2,
+                ensure_ascii=False,
+                default=str,
+            )
 
     def get_analysis(self, repo_hash: str) -> dict[str, Any] | None:
         with _LOCK:
-            filename = self._safe_filename(repo_hash)
-            return self._read_json(self.analysis_dir / f"{filename}.json")
+            return self._read_json(
+                self._analysis_file(repo_hash)
+            )
 
     def set_analysis(self, repo_hash: str, data: Any) -> None:
         with _LOCK:
-            filename = self._safe_filename(repo_hash)
-            self._write_json(self.analysis_dir / f"{filename}.json", data)
+            self._write_json(
+                self._analysis_file(repo_hash),
+                data,
+            )
 
     def get_summary(self, file_hash: str) -> str | None:
         with _LOCK:
-            filename = self._safe_filename(file_hash)
-            data = self._read_json(self.summary_dir / f"{filename}.json")
-            if not data:
+            cached = self._read_json(
+                self._summary_file(file_hash)
+            )
+
+            if cached is None:
                 return None
-            return data.get("summary")
+
+            return cached.get("summary")
 
     def set_summary(self, file_hash: str, summary: str) -> None:
         with _LOCK:
-            filename = self._safe_filename(file_hash)
-            self._write_json(self.summary_dir / f"{filename}.json", {"summary": summary})
+            self._write_json(
+                self._summary_file(file_hash),
+                {"summary": summary},
+            )
 
     def invalidate_analysis(self, repo_hash: str) -> None:
         with _LOCK:
-            filename = self._safe_filename(repo_hash)
-            p = self.analysis_dir / f"{filename}.json"
-            if p.exists():
-                p.unlink()
+            cache_file = self._analysis_file(repo_hash)
+
+            if cache_file.exists():
+                cache_file.unlink()
 
     def invalidate_summary(self, file_hash: str) -> None:
         with _LOCK:
-            filename = self._safe_filename(file_hash)
-            p = self.summary_dir / f"{filename}.json"
-            if p.exists():
-                p.unlink()
+            cache_file = self._summary_file(file_hash)
+
+            if cache_file.exists():
+                cache_file.unlink()
 
 
 _settings = get_settings()

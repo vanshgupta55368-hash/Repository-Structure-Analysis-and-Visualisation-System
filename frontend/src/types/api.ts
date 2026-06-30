@@ -61,3 +61,52 @@ export interface AnalysisResponse {
   repo_hash: string;
   dependency_map: Record<string, string[]>;
 }
+export interface FileSummaryResponse {
+  repo_path: string;
+  file_path: string;
+  language: string;
+  size: number;
+  file_hash?: string | null;
+  cached: boolean;
+  summary: string;
+}
+export interface ArchitectureSummaryResponse {
+  repo_path: string;
+  repo_hash: string;
+  cached: boolean;
+  total_files: number;
+  language_breakdown: Record<string, number>;
+  stats: AnalysisStats;
+  graph_insights: GraphInsights;
+  overview: string;
+  main_modules: string[];
+  hotspots: string[];
+  refactoring_suggestions: string[];
+}
+export interface RepositoryAIHealth {
+  score: number;
+  maintainability: string;
+  architecture: string;
+  complexity: string;
+  summary: string;
+}
+
+export interface RepositoryAIRecommendation {
+  title: string;
+  description: string;
+}
+
+export interface RepositoryAIHotspot {
+  file: string;
+  reason: string;
+  severity: string;
+}
+
+export interface RepositoryAIResponse {
+  health: RepositoryAIHealth;
+  recommendations: RepositoryAIRecommendation[];
+  hotspots: RepositoryAIHotspot[];
+}
+export interface RepositoryChatResponse {
+  answer: string;
+}

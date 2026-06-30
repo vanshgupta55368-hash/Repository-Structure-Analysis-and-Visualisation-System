@@ -4,40 +4,30 @@ import os
 from pathlib import Path
 
 from app.core.config import get_settings
-from app.core.constants import IGNORED_DIRECTORIES, IGNORED_FILES, SUPPORTED_LANGUAGE_EXTENSIONS
+from app.core.constants import (
+    IGNORED_DIRECTORIES,
+    IGNORED_FILES,
+    SUPPORTED_LANGUAGE_EXTENSIONS,
+)
 from app.models.file_model import FileNode
 from app.utils.file_utils import get_extension, is_text_file, normalize_path
 from app.utils.hashing import hash_file
 
 
-def should_ignore_directory(directory_name: str) -> bool:
-    return directory_name in IGNORED_DIRECTORIES or directory_name.startswith(".")
-
-
-def should_ignore_file(file_path: Path) -> bool:
-    if file_path.name in IGNORED_FILES:
-        return True
-    if file_path.name.startswith("~$"):
-        return True
-    return False
-
-
-def detect_language(file_path: str | Path) -> str:
-    ext = get_extension(file_path)
-    return SUPPORTED_LANGUAGE_EXTENSIONS.get(ext, "unknown")
+def should_ignore_directory(name: str) -> bool:
+    return name.startswith(".") or name in IGNORED_DIRECTORIES
 
 
 def build_file_node(repo_root: Path, file_path: Path) -> FileNode:
-    rel_path = file_path.relative_to(repo_root).as_posix()
-    ext = get_extension(file_path)
-    language = detect_language(file_path)
+    relative_path = file_path.relative_to(repo_root).as_posix()
+    extension = get_extension(file_path)
 
     return FileNode(
-        id=rel_path,
+        id=relative_path,
         name=file_path.name,
-        path=rel_path,
-        language=language,
-        extension=ext,
+        path=relative_path,
+        language=SUPPORTED_LANGUAGE_EXTENSIONS.get(extension, "unknown"),
+        extension=extension,
         size=file_path.stat().st_size,
         file_hash=hash_file(file_path),
     )
@@ -53,16 +43,20 @@ def scan_repository(repo_path: str | Path) -> list[FileNode]:
     if not repo_root.is_dir():
         raise NotADirectoryError(f"Repository path is not a directory: {repo_root}")
 
-    files: list[FileNode] = []
+    scanned_files: list[FileNode] = []
 
-    for root, dirs, filenames in os.walk(repo_root):
+    for root, dirs, file_names in os.walk(repo_root):
         dirs[:] = [d for d in dirs if not should_ignore_directory(d)]
-        current_dir = Path(root)
 
-        for filename in filenames:
-            file_path = current_dir / filename
+        folder = Path(root)
 
-            if should_ignore_file(file_path):
+        for name in file_names:
+            file_path = folder / name
+
+            if (
+                name in IGNORED_FILES
+                or name.startswith("~$")
+            ):
                 continue
 
             try:
@@ -75,28 +69,27 @@ def scan_repository(repo_path: str | Path) -> list[FileNode]:
                 continue
 
             try:
-                files.append(build_file_node(repo_root, file_path))
+                scanned_files.append(build_file_node(repo_root, file_path))
             except OSError:
                 continue
 
-    files.sort(key=lambda x: x.path)
-    return files
+    scanned_files.sort(key=lambda node: node.path)
+    return scanned_files
 
 
 def index_files_by_path(files: list[FileNode]) -> dict[str, FileNode]:
     index: dict[str, FileNode] = {}
 
     for file in files:
-        normalized = normalize_path(file.path)
         index[file.id] = file
         index[file.path] = file
-        index[normalized] = file
+        index[normalize_path(file.path)] = file
         index[file.name] = file
         index[Path(file.name).stem] = file
 
-        parts = Path(file.path).with_suffix("").parts
-        if parts:
-            index[".".join(parts)] = file
-            index["/".join(parts)] = file
+        module = Path(file.path).with_suffix("")
+        if module.parts:
+            index[".".join(module.parts)] = file
+            index["/".join(module.parts)] = file
 
     return index

@@ -18,7 +18,7 @@ except Exception:  # pragma: no cover
     legacy_genai = None
 
 
-DEFAULT_MODEL_NAME = "gemini-3.5-flash"
+DEFAULT_MODEL_NAME = "gemini-2.5-flash"
 
 
 def _dedupe_keep_order(items: list[str]) -> list[str]:

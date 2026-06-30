@@ -9,24 +9,36 @@ from dotenv import load_dotenv
 
 from app.core.constants import IGNORED_DIRECTORIES, MAX_FILE_SIZE_BYTES
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-load_dotenv(BASE_DIR / ".env")
+ROOT_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(ROOT_DIR / ".env")
 
 
 @dataclass(frozen=True)
 class Settings:
     app_name: str = "Repo Visualizer Backend"
     app_version: str = "1.0.0"
+
     debug: bool = os.getenv("DEBUG", "false").lower() == "true"
 
     cache_dir: Path = field(
-        default_factory=lambda: Path(os.getenv("CACHE_DIR", ".cache")).resolve()
+        default_factory=lambda: Path(
+            os.getenv("CACHE_DIR", ".cache")
+        ).resolve()
     )
 
-    ignored_directories: set[str] = field(default_factory=lambda: set(IGNORED_DIRECTORIES))
-    max_file_size_bytes: int = int(os.getenv("MAX_FILE_SIZE_BYTES", str(MAX_FILE_SIZE_BYTES)))
+    ignored_directories: set[str] = field(
+        default_factory=lambda: set(IGNORED_DIRECTORIES)
+    )
+
+    max_file_size_bytes: int = int(
+        os.getenv(
+            "MAX_FILE_SIZE_BYTES",
+            str(MAX_FILE_SIZE_BYTES),
+        )
+    )
 
     gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
+
     cors_origins: list[str] = field(
         default_factory=lambda: [
             origin.strip()
@@ -39,9 +51,5 @@ class Settings:
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     settings = Settings()
-
-    print("CACHE DIR =", settings.cache_dir)
-
     settings.cache_dir.mkdir(parents=True, exist_ok=True)
-
     return settings

@@ -20,7 +20,12 @@ class GraphNode(BaseModel):
     language: Optional[str] = Field(default=None, description="Detected language")
     x: float = Field(default=0.0)
     y: float = Field(default=0.0)
-    data: dict[str, Any] = Field(default_factory=dict)
+    complexity: int = Field(
+    default=0,
+    description="Cyclomatic complexity of the file"
+)
+
+data: dict[str, Any] = Field(default_factory=dict)
 
 
 class GraphEdge(BaseModel):
@@ -64,3 +69,5 @@ class GraphResponse(BaseModel):
     edges: list[GraphEdge] = Field(default_factory=list)
     stats: GraphStats = Field(default_factory=GraphStats)
     repo_hash: Optional[str] = None
+
+    
